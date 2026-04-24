@@ -5,6 +5,8 @@ Production-grade settings with security hardening.
 """
 from dotenv import load_dotenv
 load_dotenv()
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 from decouple import config
 
@@ -55,29 +57,23 @@ CACHES = {
 }
 
 # =============================================================================
-# SENTRY ERROR MONITORING (Optional)
+# SENTRY ERROR MONITORING
 # =============================================================================
 SENTRY_DSN = config("SENTRY_DSN", default="")
 
 if SENTRY_DSN:
-    try:
-        import sentry_sdk
-        from sentry_sdk.integrations.django import DjangoIntegration
-        
-        sentry_sdk.init(
-            dsn=SENTRY_DSN,
-            integrations=[
-                DjangoIntegration(),
-            ],
-            environment=config("SENTRY_ENVIRONMENT", default="production"),
-            traces_sample_rate=config("SENTRY_TRACES_SAMPLE_RATE", default=0.2, cast=float),
-            send_default_pii=False,
-            attach_stacktrace=True,
-            request_bodies="medium",
-            max_breadcrumbs=50,
-        )
-    except ImportError:
-        pass  # Sentry not installed, continue without error monitoring
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+        ],
+        environment=config("SENTRY_ENVIRONMENT", default="production"),
+        traces_sample_rate=config("SENTRY_TRACES_SAMPLE_RATE", default=0.2, cast=float),
+        send_default_pii=False,
+        attach_stacktrace=True,
+        request_bodies="medium",
+        max_breadcrumbs=50,
+    )
 
 # =============================================================================
 # LOGGING (JSON format for production)
