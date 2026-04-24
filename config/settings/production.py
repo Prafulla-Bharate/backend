@@ -5,8 +5,13 @@ Production-grade settings with security hardening.
 """
 from dotenv import load_dotenv
 load_dotenv()
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
+
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+except ImportError:  # Optional dependency in production
+    sentry_sdk = None
+    DjangoIntegration = None
 
 from decouple import config
 
@@ -61,7 +66,7 @@ CACHES = {
 # =============================================================================
 SENTRY_DSN = config("SENTRY_DSN", default="")
 
-if SENTRY_DSN:
+if SENTRY_DSN and sentry_sdk is not None and DjangoIntegration is not None:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
