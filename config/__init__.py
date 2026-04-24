@@ -1,0 +1,3 @@
+"""
+CareerAI Configuration Package
+"""

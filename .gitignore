@@ -1,0 +1,46 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local databases and artifacts
+db.sqlite3
+*.sqlite3
+
+# Django generated files
+media/
+staticfiles/
+
+# ML training artifacts (not required at runtime)
+training/data/
+training/*.ipynb
+data/interview_questions/
+data/training/
+data/models/career_model_v1_*.pkl
+
+# Test and tooling caches
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# OS/editor files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+interview_symbol_scan.txt
