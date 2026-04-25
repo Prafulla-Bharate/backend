@@ -51,6 +51,169 @@ class LearningPathService:
     """Service for learning path operations."""
 
     @staticmethod
+    def _build_role_requirements(target_role: str, target_career=None) -> Dict[str, Any]:
+        """Build role-specific, industry-relevant requirements used to steer path generation."""
+        role = (target_role or "").lower()
+
+        requirements: Dict[str, Any] = {
+            "must_have_skills": [
+                "Git", "Linux", "SQL", "API Integration", "Testing", "Debugging",
+                "Security Fundamentals", "System Design", "Cloud Basics", "CI/CD",
+                "Monitoring & Logging", "Communication",
+            ],
+            "must_have_tools": [
+                "GitHub", "VS Code", "Postman", "Docker", "GitHub Actions",
+                "AWS/GCP/Azure", "Sentry/Grafana",
+            ],
+            "trend_topics": [
+                "AI-assisted development workflows",
+                "Cloud-native deployment",
+                "Observability and reliability",
+                "Secure-by-default engineering",
+            ],
+            "industry_workflows": [
+                "Translate business requirements into technical tasks",
+                "Ship features with tests and monitoring",
+                "Review code and collaborate via pull requests",
+                "Debug production issues with logs and metrics",
+            ],
+        }
+
+        role_overrides = [
+            (
+                ["data scientist", "data science", "machine learning", "ml", "ai engineer", "genai", "nlp"],
+                {
+                    "must_have_skills": [
+                        "Python", "Statistics", "Linear Algebra", "SQL", "Data Wrangling",
+                        "Data Visualization", "Machine Learning", "Model Evaluation", "Feature Engineering",
+                        "MLOps", "LLMs", "Prompt Engineering", "RAG", "Experiment Tracking",
+                    ],
+                    "must_have_tools": [
+                        "Pandas", "NumPy", "Scikit-learn", "PyTorch/TensorFlow", "Jupyter",
+                        "MLflow/Weights & Biases", "Docker", "FastAPI", "Airflow", "BigQuery/Snowflake",
+                    ],
+                    "trend_topics": [
+                        "LLM application architecture (RAG, evals, guardrails)",
+                        "Model serving and inference optimization",
+                        "Feature stores and data quality contracts",
+                        "Responsible AI and model governance",
+                    ],
+                },
+            ),
+            (
+                ["full stack", "fullstack", "web developer", "software engineer"],
+                {
+                    "must_have_skills": [
+                        "HTML", "CSS", "JavaScript", "TypeScript", "React", "Backend APIs",
+                        "Authentication", "Databases", "Caching", "Testing", "System Design",
+                        "Performance Optimization", "Security", "CI/CD", "Cloud Deployment",
+                    ],
+                    "must_have_tools": [
+                        "React", "Node.js/Django", "PostgreSQL", "Redis", "Docker",
+                        "GitHub Actions", "Vercel/Render", "Nginx", "Playwright/Cypress",
+                    ],
+                    "trend_topics": [
+                        "Server-side rendering and edge delivery",
+                        "API-first architecture and typed contracts",
+                        "Performance budgets and Core Web Vitals",
+                        "Containerized full-stack deployment",
+                    ],
+                },
+            ),
+            (
+                ["backend", "api", "server"],
+                {
+                    "must_have_skills": [
+                        "API Design", "Database Design", "Authentication", "Authorization",
+                        "Caching", "Asynchronous Processing", "Testing", "Observability",
+                        "Security", "Scalability", "Incident Debugging",
+                    ],
+                    "must_have_tools": [
+                        "Django/FastAPI/Node", "PostgreSQL", "Redis", "Celery", "Docker",
+                        "Kubernetes", "Prometheus/Grafana", "Sentry", "Nginx",
+                    ],
+                    "trend_topics": [
+                        "Event-driven systems and queue-based architecture",
+                        "Zero-downtime deployments",
+                        "API rate limiting and resilience patterns",
+                        "SLO-based reliability engineering",
+                    ],
+                },
+            ),
+            (
+                ["frontend", "ui", "react"],
+                {
+                    "must_have_skills": [
+                        "HTML", "CSS", "JavaScript", "TypeScript", "React", "State Management",
+                        "Accessibility", "Frontend Testing", "Performance Optimization", "API Integration",
+                        "Design Systems", "Debugging",
+                    ],
+                    "must_have_tools": [
+                        "React", "Vite", "Tailwind", "Redux/Zustand", "Jest/Vitest", "Playwright",
+                        "Storybook", "Lighthouse", "Sentry",
+                    ],
+                    "trend_topics": [
+                        "Web performance engineering",
+                        "Accessible component architecture",
+                        "Design token driven UI systems",
+                        "AI-assisted UX and frontend workflows",
+                    ],
+                },
+            ),
+            (
+                ["devops", "sre", "cloud engineer", "platform engineer"],
+                {
+                    "must_have_skills": [
+                        "Linux", "Networking", "Infrastructure as Code", "Containers", "Kubernetes",
+                        "CI/CD", "Monitoring", "Incident Response", "Security Hardening", "Cost Optimization",
+                    ],
+                    "must_have_tools": [
+                        "Terraform", "Docker", "Kubernetes", "GitHub Actions/Jenkins",
+                        "Prometheus", "Grafana", "ELK", "AWS/GCP/Azure",
+                    ],
+                    "trend_topics": [
+                        "Platform engineering and internal developer platforms",
+                        "Policy-as-code and supply chain security",
+                        "FinOps and cloud cost governance",
+                        "Progressive delivery and canary strategies",
+                    ],
+                },
+            ),
+        ]
+
+        for keywords, override in role_overrides:
+            if any(keyword in role for keyword in keywords):
+                for key, values in override.items():
+                    merged = list(dict.fromkeys([*(requirements.get(key) or []), *(values or [])]))
+                    requirements[key] = merged
+                break
+
+        if target_career:
+            required_skills = list(getattr(target_career, "required_skills", []) or [])
+            preferred_skills = list(getattr(target_career, "preferred_skills", []) or [])
+            certifications = list(getattr(target_career, "certifications", []) or [])
+            requirements["must_have_skills"] = list(
+                dict.fromkeys([
+                    *(requirements.get("must_have_skills") or []),
+                    *required_skills,
+                    *preferred_skills,
+                ])
+            )
+            if certifications:
+                requirements["trend_topics"] = list(
+                    dict.fromkeys([
+                        *(requirements.get("trend_topics") or []),
+                        f"Certification alignment: {', '.join(str(c) for c in certifications[:5])}",
+                    ])
+                )
+
+        requirements["must_have_skills"] = requirements.get("must_have_skills", [])[:30]
+        requirements["must_have_tools"] = requirements.get("must_have_tools", [])[:20]
+        requirements["trend_topics"] = requirements.get("trend_topics", [])[:10]
+        requirements["industry_workflows"] = requirements.get("industry_workflows", [])[:8]
+        return requirements
+
+    @staticmethod
     def _infer_role_family(target_role: str) -> str:
         role = (target_role or "").lower()
         if any(k in role for k in [
@@ -215,17 +378,41 @@ class LearningPathService:
         experience_level: str,
         current_skills: Optional[List[str]] = None,
         skills_to_learn: Optional[List[str]] = None,
+        role_requirements: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Create a fast, deterministic, and realistic path when AI generation is slow/unavailable."""
         blueprints = list(LearningPathService._mandatory_phase_blueprints(role_family))
         current_skills = current_skills or []
         skills_to_learn = skills_to_learn or []
+        role_requirements = role_requirements or {}
+        requirement_skills = [
+            str(s).strip()
+            for s in (role_requirements.get("must_have_skills") or [])
+            if str(s).strip()
+        ]
+        requirement_tools = [
+            str(s).strip()
+            for s in (role_requirements.get("must_have_tools") or [])
+            if str(s).strip()
+        ]
+        trend_topics = [
+            str(s).strip()
+            for s in (role_requirements.get("trend_topics") or [])
+            if str(s).strip()
+        ]
 
         supplemental = [
             {
                 "title": "Professional Collaboration & Product Thinking",
                 "skills": ["Communication", "Stakeholder Management", "Product Thinking", "Documentation"],
                 "topics": ["Requirement analysis", "Decision logs", "Team communication", "Delivery planning", "Feedback loops"],
+            },
+            {
+                "title": "Industry Tools & Current Technology Stack",
+                "skills": requirement_skills[:6] or ["Industry Tooling", "Workflow Automation"],
+                "topics": (requirement_tools[:6] + trend_topics[:3])[:8] or [
+                    "Toolchain setup", "Versioned workflows", "Automation hooks", "Quality gates", "Release readiness"
+                ],
             },
             {
                 "title": "Interview Excellence & Portfolio Storytelling",
@@ -261,8 +448,9 @@ class LearningPathService:
                 difficulty = LearningPath.DifficultyLevel.EXPERT
 
             skills = [s for s in template.get("skills", []) if s][:8]
-            if skills_to_learn:
-                for skill in skills_to_learn[:6]:
+            prioritized_skills = list(dict.fromkeys([*skills_to_learn, *requirement_skills]))
+            if prioritized_skills:
+                for skill in prioritized_skills[:8]:
                     if skill not in skills and len(skills) < 8:
                         skills.append(skill)
 
@@ -314,6 +502,7 @@ class LearningPathService:
         total_hours: int,
         experience_level: str,
         skills_to_learn: Optional[List[str]] = None,
+        role_requirements: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Harden AI output into an end-to-end, industry-ready path.
 
@@ -322,6 +511,27 @@ class LearningPathService:
         """
         result = dict(recommendations or {})
         phases = list(result.get("phases") or [])
+        role_requirements = role_requirements or {}
+        requirement_skills = [
+            str(s).strip()
+            for s in (role_requirements.get("must_have_skills") or [])
+            if str(s).strip()
+        ]
+        requirement_tools = [
+            str(s).strip()
+            for s in (role_requirements.get("must_have_tools") or [])
+            if str(s).strip()
+        ]
+        trend_topics = [
+            str(s).strip()
+            for s in (role_requirements.get("trend_topics") or [])
+            if str(s).strip()
+        ]
+        industry_workflows = [
+            str(s).strip()
+            for s in (role_requirements.get("industry_workflows") or [])
+            if str(s).strip()
+        ]
 
         role_family = LearningPathService._infer_role_family(target_role)
         blueprints = LearningPathService._mandatory_phase_blueprints(role_family)
@@ -361,6 +571,35 @@ class LearningPathService:
                 "resources": LearningPathService._build_default_resources(bp["title"], target_role),
                 "estimated_hours": max(8, int(total_hours / 10)),
             })
+
+        if requirement_tools or trend_topics:
+            phase_blob = "\n".join(_phase_text_blob(p) for p in phases)
+            has_tools_phase = any(
+                token.lower() in phase_blob
+                for token in [*requirement_tools[:8], "tooling", "workflow", "stack"]
+            )
+            if not has_tools_phase:
+                phases.append({
+                    "title": "Industry Tooling, Trends & Delivery Workflows",
+                    "description": f"Practical tooling and modern workflow alignment for {target_role} based on current hiring expectations.",
+                    "skills_covered": (requirement_skills[:4] + ["Delivery Workflow", "Operational Excellence"])[:8],
+                    "topics_covered": (requirement_tools[:6] + trend_topics[:4])[:10] or [
+                        "Production toolchain", "Workflow automation", "Release process", "Observability setup"
+                    ],
+                    "learning_objectives": [
+                        "Set up and use the core industry toolchain for daily delivery",
+                        "Apply trend-aligned practices in practical implementation work",
+                        "Ship features using modern team workflows and quality gates",
+                    ],
+                    "prerequisite_skills": [],
+                    "readiness_checklist": [
+                        "Can you execute the end-to-end delivery workflow independently?",
+                        "Can you choose tools based on team and system constraints?",
+                        "Can you troubleshoot pipeline and deployment failures quickly?",
+                    ],
+                    "resources": LearningPathService._build_default_resources("Industry tooling and workflows", target_role),
+                    "estimated_hours": max(8, int(total_hours / 12)),
+                })
 
         # Ensure robust phase count for end-to-end depth
         min_phase_count = 10
@@ -405,7 +644,14 @@ class LearningPathService:
             topics = phase.get("topics_covered") or []
             if not isinstance(topics, list):
                 topics = [str(topics)]
-            phase["topics_covered"] = [str(t).strip() for t in topics if str(t).strip()][:10] or ["Core concepts", "Hands-on implementation", "Production considerations", "Best practices"]
+            normalized_topics = [str(t).strip() for t in topics if str(t).strip()]
+            if industry_workflows:
+                for workflow in industry_workflows[:4]:
+                    if workflow not in normalized_topics and len(normalized_topics) < 10:
+                        normalized_topics.append(workflow)
+            phase["topics_covered"] = normalized_topics[:10] or [
+                "Core concepts", "Hands-on implementation", "Production considerations", "Best practices"
+            ]
 
             objectives = phase.get("learning_objectives") or []
             if not isinstance(objectives, list):
@@ -482,6 +728,8 @@ class LearningPathService:
             for skill in phase.get("skills_covered", []) or []:
                 if skill:
                     skills_union.add(skill)
+        for skill in requirement_skills:
+            skills_union.add(skill)
         result["skills_covered"] = list(skills_union)[:80]
 
         if not result.get("description"):
@@ -695,6 +943,18 @@ class LearningPathService:
             except Exception:
                 target_skill_list = required_skills[:10]
 
+        role_requirements = LearningPathService._build_role_requirements(
+            target_role=(target_career.title if target_career else (target_career_title or "career growth")),
+            target_career=target_career,
+        )
+        if not target_skill_list:
+            target_skill_list = list(role_requirements.get("must_have_skills") or [])[:12]
+        else:
+            target_skill_list = list(dict.fromkeys([
+                *target_skill_list,
+                *(role_requirements.get("must_have_skills") or [])[:12],
+            ]))
+
         # Remove skills user already has at expert/proficient level
         skills_to_learn = [s for s in target_skill_list if s not in expert_skills]
 
@@ -731,6 +991,7 @@ class LearningPathService:
                     completed_paths=completed_path_titles,
                     learning_style=learning_style,
                     timeline_weeks=timeline_weeks,
+                    role_requirements=role_requirements,
                 )
 
             executor = ThreadPoolExecutor(max_workers=1)
@@ -768,6 +1029,7 @@ class LearningPathService:
                 experience_level=experience_level,
                 current_skills=current_skills,
                 skills_to_learn=skills_to_learn,
+                role_requirements=role_requirements,
             )
             model_used = "structured_fallback_v2"
 
@@ -780,6 +1042,7 @@ class LearningPathService:
                 experience_level=experience_level,
                 current_skills=current_skills,
                 skills_to_learn=skills_to_learn,
+                role_requirements=role_requirements,
             )
             model_used = "structured_fallback_v2"
 
@@ -796,6 +1059,7 @@ class LearningPathService:
             total_hours=target_total_hours,
             experience_level=experience_level,
             skills_to_learn=skills_to_learn,
+            role_requirements=role_requirements,
         )
 
         title = recommendations.get("title") or (
@@ -827,6 +1091,7 @@ class LearningPathService:
                 "timeline_weeks": timeline_weeks,
                 "skills_to_learn": skills_to_learn,
                 "expert_skills": expert_skills,
+                "role_requirements": role_requirements,
             },
         )
 

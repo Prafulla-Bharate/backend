@@ -191,6 +191,7 @@ Provide 3-5 career predictions. For each prediction include:
         completed_paths: Optional[List[str]] = None,
         learning_style: str = "mixed",
         timeline_weeks: int = 12,
+        role_requirements: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Generate a complete end-to-end career learning path with 10-14 comprehensive phases
@@ -220,6 +221,28 @@ Provide 3-5 career predictions. For each prediction include:
             if completed_paths
             else ""
         )
+        role_requirements = role_requirements or {}
+        must_have_skills = role_requirements.get("must_have_skills", [])
+        must_have_tools = role_requirements.get("must_have_tools", [])
+        trend_topics = role_requirements.get("trend_topics", [])
+        industry_workflows = role_requirements.get("industry_workflows", [])
+
+        must_have_skills_block = (
+          "\n".join(f"  - {s}" for s in must_have_skills[:20])
+          if must_have_skills else "  - Derive from target role and current market hiring expectations"
+        )
+        must_have_tools_block = (
+          "\n".join(f"  - {t}" for t in must_have_tools[:15])
+          if must_have_tools else "  - Derive practical toolchain from target role"
+        )
+        trend_topics_block = (
+          "\n".join(f"  - {t}" for t in trend_topics[:10])
+          if trend_topics else "  - Include modern hiring trend topics for this role"
+        )
+        industry_workflows_block = (
+          "\n".join(f"  - {w}" for w in industry_workflows[:8])
+          if industry_workflows else "  - Include realistic day-to-day production workflows"
+        )
         total_hours = max(hours_per_week * timeline_weeks, 120)
 
         prompt = f"""You are a senior curriculum architect. Generate a COMPLETE, COMPREHENSIVE learning path as a raw JSON object.
@@ -241,6 +264,19 @@ Provide 3-5 career predictions. For each prediction include:
 
 ## REQUIRED SKILLS TO COVER
 {', '.join(skills_to_learn) if skills_to_learn else 'Derive all required skills from target role'}
+
+## INDUSTRY REQUIREMENTS (MUST COVER)
+Core skills:
+{must_have_skills_block}
+
+Core tools/technologies:
+{must_have_tools_block}
+
+Current trend topics:
+{trend_topics_block}
+
+Real-world workflows:
+{industry_workflows_block}
 
 {expert_block}
 {completed_block}
@@ -280,6 +316,12 @@ Regardless of role, include phases that cover all of these dimensions across the
 Include phases/skills that are NOT the core skill but are REQUIRED to be effective in the role.
 Examples: Data Scientists need SQL, visualization tools, Git, cloud deployment, communication.
 Full Stack devs need Docker, Linux basics, DB design, caching, monitoring.
+
+## REAL-WORLD EXECUTION MANDATE
+- Every phase must map to actual tasks professionals do on the job.
+- Every phase must include concrete tools/technologies used in industry today.
+- Progression must be realistic for a candidate moving from beginner to job-ready expert.
+- Ensure no major hiring requirement is skipped for the target role.
 
 ## OUTPUT FORMAT (exact raw JSON — zero text outside braces)
 {{
@@ -366,7 +408,8 @@ STRICT RULES:
 7. readiness_checklist: exactly 3 items, phrased as self-assessment questions.
 8. topics_covered: 4-8 specific topics, ordered from basic to advanced within the phase.
 9. NEVER include a "url" field. Only "search_query".
-10. Raw JSON ONLY — zero markdown, zero text outside the JSON object."""
+10. At least one phase must explicitly focus on industry tools/workflows and one on interview/portfolio readiness.
+11. Raw JSON ONLY — zero markdown, zero text outside the JSON object."""
 
         gemini = get_gemini_service()
         return gemini.generate_json(
