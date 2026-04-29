@@ -1598,6 +1598,61 @@ class SessionService:
                 career_text=career_text,
             )
 
+        # Fallback: If still no questions (DB was empty), generate structured questions
+        if not questions:
+            logger.info(f"No questions found in DB for session {session.id}, generating structured fallback questions")
+            fallback_role = career_text or "General Interview"
+            structured = hosted_ai.generate_structured_round_questions(
+                target_role=fallback_role,
+                section=section_name,
+                difficulty=difficulty_preference,
+                num_questions=num_questions,
+                technical_mcq_count=max(0, technical_mcq_count or 0),
+                coding_count=max(0, coding_count or 0),
+                coding_language=coding_language or "python",
+                coding_mode=coding_mode or "function",
+            )
+            
+            if structured:
+                for payload in structured:
+                    raw_type = str(payload.get("question_type") or "technical").lower()
+                    q_type = raw_type if raw_type in {
+                        InterviewQuestion.QuestionType.BEHAVIORAL,
+                        InterviewQuestion.QuestionType.TECHNICAL,
+                        InterviewQuestion.QuestionType.SITUATIONAL,
+                        InterviewQuestion.QuestionType.CASE_STUDY,
+                        InterviewQuestion.QuestionType.CODING,
+                        InterviewQuestion.QuestionType.SYSTEM_DESIGN,
+                        InterviewQuestion.QuestionType.BRAINTEASER,
+                    } else InterviewQuestion.QuestionType.TECHNICAL
+                    
+                    options = payload.get("options") if isinstance(payload.get("options"), list) else []
+                    correct = str(payload.get("correct_option") or "").strip()
+                    answer_tips = payload.get("answer_tips") if isinstance(payload.get("answer_tips"), list) else []
+                    
+                    if options and q_type == InterviewQuestion.QuestionType.TECHNICAL:
+                        answer_tips = [str(option).strip() for option in options if str(option).strip()]
+                    
+                    question_text = hosted_ai._clean_question_text(
+                        str(payload.get("question") or "").strip(),
+                        fallback_role,
+                    )
+                    if not question_text:
+                        continue
+                    
+                    generated_question = InterviewQuestion.objects.create(
+                        question=question_text,
+                        question_type=q_type,
+                        difficulty=difficulty_preference,
+                        category="LLM Generated",
+                        tags=["fallback", "practice", fallback_role.lower()],
+                        expected_topics=[fallback_role],
+                        sample_answer=(correct if options and correct else str(payload.get("sample_answer") or "").strip()),
+                        answer_tips=answer_tips,
+                        is_active=False,
+                    )
+                    questions.append(generated_question)
+
         if technical_mcq_count is not None and coding_count is not None and (technical_mcq_count + coding_count) > 0:
             current_mcq = sum(1 for question in questions if question.question_type == InterviewQuestion.QuestionType.TECHNICAL)
             current_coding = sum(1 for question in questions if question.question_type == InterviewQuestion.QuestionType.CODING)
